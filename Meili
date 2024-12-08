@@ -1,0 +1,23 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local neck = character:WaitForChild("Neck") -- Wait for the Neck part
+local screenGui = Instance.new("ScreenGui")
+local toggleButton = Instance.new("TextButton")
+screenGui.Parent = player:WaitForChild("PlayerGui")
+toggleButton.Size = UDim2.new(0, 200, 0, 50)
+toggleButton.Position = UDim2.new(0.5, -100, 0.5, -25)
+toggleButton.Text = "Toggle Long Neck"
+toggleButton.Parent = screenGui
+local longNeck = false -- Initial state
+local function toggleNeck()
+    if longNeck then
+        neck.C0 = neck.C0 * CFrame.new(0, -3, 0) -- Reset to normal
+        toggleButton.Text = "Toggle Long Neck" -- Update button text
+        longNeck = false
+    else
+        neck.C0 = neck.C0 * CFrame.new(0, 3, 0) -- Extend neck
+        toggleButton.Text = "Toggle Normal Neck" -- Update button text
+        longNeck = true
+    end
+end
+toggleButton.MouseButton1Click:Connect(toggleNeck)
