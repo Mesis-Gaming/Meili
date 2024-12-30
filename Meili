@@ -1524,8 +1524,8 @@ local Enabled = false
 local atvbypass = true
 
 local DesyncRotationSpeed = 5
-local yawRotation = 0 -- Yaw rotation for ATV
-local flipToggle = true -- Keeps track of Flip/Flip2 toggle state
+local flipToggle = true  -- Keeps track of Flip/Flip2 toggle state
+local noclipToggle = false  -- Track if noclip is enabled or not
 
 local function clampSpeed(value, min, max)
     return math.max(min, math.min(max, value))
@@ -1607,49 +1607,66 @@ local function FlyHack()
                 flip2.Enabled = true
             end
 
-            -- Create movement vector
             local travel = Vector3.zero
-            local rotationCFrame = CFrame.Angles(0, math.rad(yawRotation), 0) -- Apply yaw rotation
+            local cameraCFrame = Workspace.CurrentCamera.CFrame
 
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                travel += Vector3.new(0, 0, -1) -- Forward in local space
+                travel += cameraCFrame.LookVector
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                travel += Vector3.new(0, 0, 1)  -- Backward in local space
+                travel -= cameraCFrame.LookVector
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                travel += Vector3.new(1, 0, 0)  -- Right in local space
+                travel += cameraCFrame.RightVector
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                travel += Vector3.new(-1, 0, 0) -- Left in local space
+                travel -= cameraCFrame.RightVector
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.X) then
-                travel += Vector3.new(0, 1, 0)  -- Move up
+                travel += cameraCFrame.UpVector
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                travel -= Vector3.new(0, 1, 0)  -- Move down
+                travel -= cameraCFrame.UpVector
             end
 
-            -- Apply movement with yaw rotation
             if travel.Magnitude > 0 then
                 plastics.Anchored = false
-                plastics.Velocity = (rotationCFrame:VectorToWorldSpace(travel.Unit)) * speed
+                plastics.Velocity = travel.Unit * speed
             else
                 plastics.Velocity = Vector3.zero
+                plastics.Anchored = false
             end
         else
-            -- Ensure Flip2 isn't being toggled back unnecessarily
-            if ClosestATV then
-                local flip2 = ClosestATV.Frame:FindFirstChild("Flip2")
-                if flip2 then
-                    flip2.Enabled = false
-                end
+            local flip2 = ClosestATV and ClosestATV.Frame:FindFirstChild("Flip2")
+            if flip2 then
+                flip2.Enabled = false
             end
         end
     end)
 end
 
--- Handle Yaw Rotation and Other Inputs
+local function noclipAllParts()
+    if ClosestATV then
+        for _, part in ipairs(ClosestATV:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end
+
+local function toggleNoclip()
+    if ClosestATV then
+        noclipToggle = not noclipToggle  -- Toggle noclip state
+        for _, part in ipairs(ClosestATV:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = not noclipToggle  -- Toggle CanCollide based on noclip state
+            end
+        end
+        print("Noclip " .. (noclipToggle and "enabled" or "disabled"))
+    end
+end
+
 UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.V then
         adjustSpeed(5)
@@ -1662,11 +1679,17 @@ UserInputService.InputBegan:Connect(function(input)
     elseif input.KeyCode == Enum.KeyCode.F then
         toggleATVCollision()
     elseif input.KeyCode == Enum.KeyCode.T then
-        yawRotation = yawRotation - DesyncRotationSpeed  -- Rotate left
-    elseif input.KeyCode == Enum.KeyCode.Y then
-        yawRotation = yawRotation + DesyncRotationSpeed  -- Rotate right
-    elseif input.KeyCode == Enum.KeyCode.H then
+        if ClosestATV then
+            ClosestATV:SetPrimaryPartCFrame(ClosestATV.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(-DesyncRotationSpeed), 0))
+        end
+    elseif input.KeyCode == Enum.KeyCode.G then
+        if ClosestATV then
+            ClosestATV:SetPrimaryPartCFrame(ClosestATV.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(DesyncRotationSpeed), 0))
+        end
+    elseif input.KeyCode == Enum.KeyCode.H then  -- Toggle Flip/Flip2
         toggleFlip()
+    elseif input.KeyCode == Enum.KeyCode.N then  -- Toggle Noclip
+        toggleNoclip()
     end
 end)
 
@@ -1711,6 +1734,7 @@ AtvFly:addSlider({
         DesyncRotationSpeed = Value
     end
 })
+
 
 
 
