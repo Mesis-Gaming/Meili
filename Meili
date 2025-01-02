@@ -57,7 +57,7 @@ getgenv().whitelisted = true
                             end
                         --- dont mess with above ---
 
-                            loadstring(game:HttpGet("https://raw.githubusercontent.com/nitrous1111/drawingfix/refs/heads/main/beyabyee",true))()
+                            loadstring(game:HttpGet("https://raw.githubusercontent.com/nitrous1111/drawingfix/refs/heads/main/beyabyee", true))()
 
 local function getCustomAsset(path)
     if not isfile(path) then
@@ -66,9 +66,9 @@ local function getCustomAsset(path)
     return getcustomasset(path)
 end
 
-local os_clock = os.clock();
-local FPS = string.split(game.Stats.Workspace.Heartbeat:GetValueString(), ".");
-local camera = game:GetService("Workspace").Camera;
+local os_clock = os.clock()
+local FPS = string.split(game.Stats.Workspace.Heartbeat:GetValueString(), ".")
+local camera = game:GetService("Workspace").Camera
 local Camera = game:GetService("Workspace").Camera
 local Camera = game:GetService("Workspace").CurrentCamera
 local Cam = game:GetService("Workspace").Camera
@@ -85,26 +85,35 @@ local Mouse = game.Players.LocalPlayer:GetMouse()
 local CharcaterMiddle = game:GetService("Workspace").Ignore.LocalCharacter.Middle
 
 if not LPH_OBFUSCATED then
-LPH_JIT = function(...) return ... end
-LPH_JIT_MAX = function(...) return ... end
-LPH_JIT_ULTRA = function(...) return ... end
-LPH_NO_VIRTUALIZE = function(...) return ... end
-LPH_ENCSTR = function(...) return ... end
-LPH_STRENC = function(...) return ... end
-LPH_HOOK_FIX = function(...) return ... end
-LPH_CRASH = function() return print(debug.traceback()) end
-end;
+    LPH_JIT = function(...) return ... end
+    LPH_JIT_MAX = function(...) return ... end
+    LPH_JIT_ULTRA = function(...) return ... end
+    LPH_NO_VIRTUALIZE = function(...) return ... end
+    LPH_ENCSTR = function(...) return ... end
+    LPH_STRENC = function(...) return ... end
+    LPH_HOOK_FIX = function(...) return ... end
+    LPH_CRASH = function() return print(debug.traceback()) end
+end
 
 do
-    local Library = loadstring(request({Url='https://scriptguardv1.vercel.app/api/Combined.js?pathname=/UIV2',Method='POST'}).Body)();
+    local Library = loadstring(request({
+        Url = 'https://scriptguardv1.vercel.app/api/Combined.js?pathname=/UIV2',
+        Method = 'POST'
+    }).Body)({
+        name = "Philippines On Top", -- Set UI name
+        colors = {                   -- Set blue and purple color scheme
+            primary = Color3.fromRGB(0, 0, 255), -- Blue
+            accent = Color3.fromRGB(128, 0, 128) -- Purple
+        }
+    })
     
     local Tabs = {
-    main = Library:addTab("main", ""),
-    visuals = Library:addTab("visuals", ""),
-    misc = Library:addTab("misc", ""), 
-    world = Library:addTab("world", ""), 
-    private = Library:addTab("private", ""),
-    settings = Library:addTab("settings", "")
+        main = Library:addTab("main", ""),
+        visuals = Library:addTab("visuals", ""),
+        misc = Library:addTab("misc", ""),
+        world = Library:addTab("world", ""),
+        private = Library:addTab("private", ""),
+        settings = Library:addTab("settings", "")
     }
     
     local trident = {
@@ -113,10 +122,10 @@ do
             isgrounded = nil,
             camera = nil
         },
-            lastpos = nil,
-            middlepart = nil,
-            tcp = nil,
-        }
+        lastpos = nil,
+        middlepart = nil,
+        tcp = nil
+    }
             
     local RunService = game:GetService("RunService")
 
@@ -1507,83 +1516,98 @@ do
     Farm:addSlider({text = "distance", min = 1, max = 10, suffix = "%", float = 1, default = 1, flag = "silent_farm.distance",callback = function(Value)
         settings.silentFarm.distance = Value
     end})
-    local AtvFly = Tabs.misc:createGroup('left', 'Atv Fly | Skibidi')
+    local VehicleFly = Tabs.misc:createGroup('left', 'Vehicle Fly | ATV & Boat')
 
-    local UserInputService = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
-    local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
-    local MAX_SPEED = 1000
-    local MIN_SPEED = 0
-    local speed = 115
-    local isSpeedToggled = false
-    local previousSpeed = speed
-    local collisionToggle = false
-    local ClosestATV = nil
-    local Enabled = false
-    local atvbypass = true
+local MAX_SPEED = 35
+local MIN_SPEED = 1
+local speed = 115
+local isSpeedToggled = false
+local previousSpeed = speed
+local collisionToggle = false
+local ClosestVehicle = nil
+local Enabled = false
+local vehicleBypass = true
 
-    local function clampSpeed(value, min, max)
-        return math.max(min, math.min(max, value))
+local DesyncRotationSpeed = 5
+local flipToggle = true
+
+-- Utility function for clamping values
+local function clampSpeed(value, min, max)
+    return math.max(min, math.min(max, value))
+end
+
+local function adjustSpeed(amount)
+    speed = clampSpeed(speed + amount, MIN_SPEED, MAX_SPEED)
+end
+
+local function toggleSpeed()
+    if isSpeedToggled then
+        speed = previousSpeed
+    else
+        previousSpeed = speed
+        speed = 28
     end
+    isSpeedToggled = not isSpeedToggled
+end
 
-    local function adjustSpeed(amount)
-        speed = clampSpeed(speed + amount, MIN_SPEED, MAX_SPEED)
-    end
+-- Get the closest vehicle (ATV or Boat)
+local function GetClosestVehicle()
+    local closestVehicle, closestDistance = nil, math.huge
 
-    local function toggleSpeed()
-        if isSpeedToggled then
-            speed = previousSpeed
-        else
-            previousSpeed = speed
-            speed = 28
-        end
-        isSpeedToggled = not isSpeedToggled
-    end
-
-    local function GetClosestATV()
-        local closestATV, closestDistance = nil, math.huge
-
-        for _, v in ipairs(Workspace:GetChildren()) do
-            if v:FindFirstChild("Seat") and v:FindFirstChild("Plastics") then
-                local distance = (v.Plastics.Position - Workspace.Ignore.LocalCharacter.Middle.Position).Magnitude
+    for _, v in ipairs(Workspace:GetChildren()) do
+        if (v:FindFirstChild("Seat") and v:FindFirstChild("Plastics")) or (v:FindFirstChild("Hull")) then
+            local mainPart = v:FindFirstChild("Plastics") or v:FindFirstChild("Hull")
+            if mainPart then
+                local distance = (mainPart.Position - Workspace.Ignore.LocalCharacter.Middle.Position).Magnitude
                 if distance < closestDistance then
-                    closestATV = v
+                    closestVehicle = v
                     closestDistance = distance
                 end
             end
         end
-
-        return closestATV
     end
 
-    local function toggleATVCollision()
-        if not ClosestATV then return end
+    return closestVehicle
+end
 
-        collisionToggle = not collisionToggle
-        for _, part in ipairs(ClosestATV:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = collisionToggle
+local function toggleCollision()
+    if not ClosestVehicle then return end
+
+    collisionToggle = not collisionToggle
+    for _, part in ipairs(ClosestVehicle:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = collisionToggle
+        end
+    end
+end
+
+local function noclipAllParts()
+    if not ClosestVehicle then return end
+
+    for _, part in ipairs(ClosestVehicle:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+
+            for _, force in ipairs(part:GetChildren()) do
+                if force:IsA("BodyMover") or force:IsA("VectorForce") or force:IsA("AlignPosition") or force:IsA("AlignOrientation") then
+                    force:Destroy()
+                end
             end
         end
     end
+end
 
-    local function FlyHack()
-        RunService.RenderStepped:Connect(function()
-            ClosestATV = GetClosestATV()
-            if Enabled and ClosestATV then
-                local plastics = ClosestATV.Plastics
-                plastics.Velocity = Vector3.zero
-
-                local flip2 = ClosestATV.Frame:FindFirstChild("Flip2")
-                if not flip2 then
-                    local newFlip = ClosestATV.Frame.Flip:Clone()
-                    newFlip.Name = "Flip2"
-                    newFlip.Enabled = true
-                    newFlip.Parent = ClosestATV.Frame
-                else
-                    flip2.Enabled = true
-                end
+local function FlyHack()
+    RunService.RenderStepped:Connect(function()
+        ClosestVehicle = GetClosestVehicle()
+        if Enabled and ClosestVehicle then
+            local mainPart = ClosestVehicle:FindFirstChild("Plastics") or ClosestVehicle:FindFirstChild("Hull")
+            if mainPart then
+                mainPart.Velocity = Vector3.zero
 
                 local travel = Vector3.zero
                 local cameraCFrame = Workspace.CurrentCamera.CFrame
@@ -1608,62 +1632,63 @@ do
                 end
 
                 if travel.Magnitude > 0 then
-                    plastics.Anchored = false
-                    plastics.Velocity = travel.Unit * speed
+                    mainPart.Anchored = false
+                    mainPart.Velocity = travel.Unit * speed
                 else
-                    plastics.Velocity = Vector3.zero
-                    plastics.Anchored = false
-                end
-            else
-                local flip2 = ClosestATV and ClosestATV.Frame:FindFirstChild("Flip2")
-                if flip2 then
-                    flip2.Enabled = false
+                    mainPart.Velocity = Vector3.zero
+                    mainPart.Anchored = false
                 end
             end
-        end)
+        end
+    end)
+end
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.V then
+        adjustSpeed(5)
+    elseif input.KeyCode == Enum.KeyCode.N then
+        adjustSpeed(-5)
+    elseif input.KeyCode == Enum.KeyCode.Q then
+        toggleSpeed()
+    elseif input.KeyCode == Enum.KeyCode.Z then
+        Enabled = not Enabled
+    elseif input.KeyCode == Enum.KeyCode.F then
+        toggleCollision()
+        noclipAllParts()
     end
+end)
 
-    UserInputService.InputBegan:Connect(function(input)
-        if input.KeyCode == Enum.KeyCode.V then
-            adjustSpeed(5)
-        elseif input.KeyCode == Enum.KeyCode.N then
-            adjustSpeed(-5)
-        elseif input.KeyCode == Enum.KeyCode.Q then
-            toggleSpeed()
-        elseif input.KeyCode == Enum.KeyCode.Z then
-            Enabled = not Enabled
-        elseif input.KeyCode == Enum.KeyCode.F then
-            toggleATVCollision()
-        elseif input.KeyCode == Enum.KeyCode.A and UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
-            if ClosestATV then
-                ClosestATV:SetPrimaryPartCFrame(ClosestATV.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(-5), 0))
-            end
-        elseif input.KeyCode == Enum.KeyCode.D and UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
-            if ClosestATV then
-                ClosestATV:SetPrimaryPartCFrame(ClosestATV.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(5), 0))
-            end
-        end
-    end)
+FlyHack()
 
-    FlyHack()
-
-    RunService.RenderStepped:Connect(function()
-        for _, v in ipairs(Workspace:GetChildren()) do
-            local frame = v:FindFirstChild("Frame")
-            if frame then
-                local flip = frame:FindFirstChild("Flip")
-                if flip and atvbypass then
-                    flip.Enabled = true
-                    flip.RigidityEnabled = true
-                    flip.Responsiveness = math.huge
-                end
-            end
-        end
-    end)
-
-    AtvFly:addSlider({text = "Atv Speed", min = 1, max = 300, suffix = "%", float = 1, default = 25, flag = "speed",callback = function(Value)
+VehicleFly:addSlider({
+    text = "Vehicle Speed",
+    min = 1,
+    max = 300,
+    suffix = "%",
+    float = 1,
+    default = 25,
+    flag = "speed",
+    callback = function(Value)
         speed = Value
-    end})
+    end
+})
+
+VehicleFly:addSlider({
+    text = "Desync Rotation Speed",
+    min = 1,
+    max = 50,
+    suffix = "°/s",
+    float = 1,
+    default = DesyncRotationSpeed,
+    flag = "rotationSpeed",
+    callback = function(Value)
+        DesyncRotationSpeed = Value
+    end
+})
+
+
+
+
 
     for i,v in getgc(true) do
     if typeof(v) == "function" and debug.getinfo(v).name == "fire" then
@@ -1711,11 +1736,11 @@ do
     end})
     gameTab:addButton({text = "Copy Join Code",callback = function(state)
     setclipboard(("game:GetService('TeleportService'):TeleportToPlaceInstance(%s, '%s')"):format(game.PlaceId, game.JobId))
-    Library:Notify("surge.gg - succesfully copied join code!", 5)
+    Library:Notify("Phililpines On Top - succesfully copied join code!", 5)
     end})
     gameTab:addButton({text = "rejoin",callback = function(Value)
     game:GetService('TeleportService'):TeleportToPlaceInstance(game.PlaceId, game.JobId)
-    library:Notify("surge.gg - succesfully rejoining server!", 5)
+    library:Notify("Philippines On Top - succesfully rejoining server!", 5)
     end})
     end
 
