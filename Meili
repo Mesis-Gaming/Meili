@@ -1590,6 +1590,7 @@ local function removeForces()
     if ClosestATV then
         for _, force in ipairs(ClosestATV:GetDescendants()) do
             if force:IsA("BodyGyro") or force:IsA("BodyPosition") or force:IsA("VectorForce") then
+                print("Removing force:", force.Name, "Class:", force.ClassName)
                 force:Destroy()
             end
         end
@@ -1656,10 +1657,25 @@ end
 local function noclipAllParts()
     if ClosestATV then
         for _, part in ipairs(ClosestATV:GetDescendants()) do
+            print("Part:", part.Name, "CanCollide:", part.CanCollide, "Anchored:", part.Anchored)
             if part:IsA("BasePart") then
-                part.CanCollide = false
                 part.Anchored = false
-                part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0)
+                part.CanCollide = false
+                part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+            end
+
+            if part:IsA("MeshPart") then
+                part.CollisionFidelity = Enum.CollisionFidelity.Box
+                part.CanCollide = false
+            end
+
+            if part.Name == "Plastics" then
+                part.Anchored = false
+                part.CanCollide = false
+            end
+
+            if part:IsA("Weld") or part:IsA("Motor6D") then
+                part:Destroy()
             end
         end
     end
