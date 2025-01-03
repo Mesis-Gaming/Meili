@@ -117,7 +117,6 @@ do
             middlepart = nil,
             tcp = nil,
         }
-  
             
     local RunService = game:GetService("RunService")
 
@@ -1398,129 +1397,94 @@ do
         end
     end)
 
-   local CorpseCaches, ATVCache, BoatCache = {}, {}, {}
+    local CorpseCaches, ATVCache = {}, {}
 
-workspace.ChildAdded:Connect(function(child)
-    if settings.corpseESP.enabled then
-        local unionOp = child:FindFirstChildOfClass("UnionOperation")
-        if unionOp and unionOp.Color == settings.corpseESP.unionColor then
-            local corpseCache = Drawing.new("Text")
-            corpseCache.Size = 10
-            corpseCache.Color = settings.corpseESP.textColor
-            corpseCache.Outline = true
-            corpseCache.OutlineColor = settings.corpseESP.outlineColor
-            CorpseCaches[child] = corpseCache
+    workspace.ChildAdded:Connect(function(child)
+        if settings.corpseESP.enabled then
+            local unionOp = child:FindFirstChildOfClass("UnionOperation")
+            if unionOp and unionOp.Color == settings.corpseESP.unionColor then
+                local corpseCache = Drawing.new("Text")
+                corpseCache.Size = 10
+                corpseCache.Color = settings.corpseESP.textColor
+                corpseCache.Outline = true
+                corpseCache.OutlineColor = settings.corpseESP.outlineColor
+                CorpseCaches[child] = corpseCache
+            end
         end
-    end
+    end)
 
-    if settings.atvESP.enabled then
-        local seat = child:FindFirstChild("Seat")
-        local plastics = child:FindFirstChild("Plastics")
-        if seat and plastics then
-            local atvHighlight = Drawing.new("Text")
-            atvHighlight.Size = 10
-            atvHighlight.Color = settings.atvESP.textColor
-            atvHighlight.Outline = true
-            atvHighlight.OutlineColor = settings.atvESP.outlineColor
-            ATVCache[child] = atvHighlight
+    workspace.ChildRemoved:Connect(function(child)
+        local corpseCache = CorpseCaches[child]
+        if corpseCache then
+            corpseCache:Remove()
+            CorpseCaches[child] = nil
         end
-    end
+    end)
 
-    if settings.boatESP.enabled then
-        local boatSeat = child:FindFirstChild("BoatSeat")
-        local hull = child:FindFirstChild("Hull")
-        if boatSeat and hull then
-            local boatHighlight = Drawing.new("Text")
-            boatHighlight.Size = 10
-            boatHighlight.Color = settings.boatESP.textColor
-            boatHighlight.Outline = true
-            boatHighlight.OutlineColor = settings.boatESP.outlineColor
-            BoatCache[child] = boatHighlight
+    workspace.ChildAdded:Connect(function(child)
+        if settings.atvESP.enabled then
+            local seat = child:FindFirstChild("Seat")
+            local plastics = child:FindFirstChild("Plastics")
+            if seat and plastics then
+                local atvHighlight = Drawing.new("Text")
+                atvHighlight.Size = 10
+                atvHighlight.Color = settings.atvESP.textColor
+                atvHighlight.Outline = true
+                atvHighlight.OutlineColor = settings.atvESP.outlineColor
+                ATVCache[child] = atvHighlight
+            end
         end
-    end
-end)
+    end)
 
-workspace.ChildRemoved:Connect(function(child)
-    local corpseCache = CorpseCaches[child]
-    if corpseCache then
-        corpseCache:Remove()
-        CorpseCaches[child] = nil
-    end
+    workspace.ChildRemoved:Connect(function(child)
+        local atvHighlight = ATVCache[child]
+        if atvHighlight then
+            atvHighlight:Remove()
+            ATVCache[child] = nil
+        end
+    end)
 
-    local atvHighlight = ATVCache[child]
-    if atvHighlight then
-        atvHighlight:Remove()
-        ATVCache[child] = nil
-    end
-
-    local boatHighlight = BoatCache[child]
-    if boatHighlight then
-        boatHighlight:Remove()
-        BoatCache[child] = nil
-    end
-end)
-
-RunService.Heartbeat:Connect(function()
-    if settings.corpseESP.enabled then
-        for corpse, corpseCache in pairs(CorpseCaches) do
-            local primaryPart = corpse.PrimaryPart
-            if primaryPart then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(primaryPart.Position)
-                local distance = (Camera.CFrame.Position - primaryPart.Position).Magnitude
-                corpseCache.Visible = onScreen
-                if corpseCache.Visible then
-                    corpseCache.Text = "Corpse [" .. math.floor(distance) .. "]"
-                    corpseCache.Position = Vector2.new(screenPos.X, screenPos.Y)
+    RunService.Heartbeat:Connect(function()
+        if settings.corpseESP.enabled then
+            for corpse, corpseCache in pairs(CorpseCaches) do
+                local primaryPart = corpse.PrimaryPart
+                if primaryPart then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(primaryPart.Position)
+                    local distance = (Camera.CFrame.Position - primaryPart.Position).Magnitude
+                    corpseCache.Visible = onScreen
+                    if corpseCache.Visible then
+                        corpseCache.Text = "Corpse [" .. math.floor(distance) .. "]"
+                        corpseCache.Position = Vector2.new(screenPos.X, screenPos.Y)
+                    end
                 end
             end
         end
-    end
 
-    if settings.atvESP.enabled then
-        for atv, atvHighlight in pairs(ATVCache) do
-            local primaryPart = atv.PrimaryPart
-            if primaryPart then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(primaryPart.Position)
-                local distance = (Camera.CFrame.Position - primaryPart.Position).Magnitude
-                atvHighlight.Visible = onScreen
-                if atvHighlight.Visible then
-                    atvHighlight.Text = "ATV [" .. math.floor(distance) .. "]"
-                    atvHighlight.Position = Vector2.new(screenPos.X, screenPos.Y)
+        if settings.atvESP.enabled then
+            for atv, atvHighlight in pairs(ATVCache) do
+                local primaryPart = atv.PrimaryPart
+                if primaryPart then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(primaryPart.Position)
+                    local distance = (Camera.CFrame.Position - primaryPart.Position).Magnitude
+                    atvHighlight.Visible = onScreen
+                    if atvHighlight.Visible then
+                        atvHighlight.Text = "ATV [" .. math.floor(distance) .. "]"
+                        atvHighlight.Position = Vector2.new(screenPos.X, screenPos.Y)
+                    end
                 end
             end
         end
-    end
+    end)
 
-    if settings.boatESP.enabled then
-        for boat, boatHighlight in pairs(BoatCache) do
-            local primaryPart = boat.PrimaryPart
-            if primaryPart then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(primaryPart.Position)
-                local distance = (Camera.CFrame.Position - primaryPart.Position).Magnitude
-                boatHighlight.Visible = onScreen
-                if boatHighlight.Visible then
-                    boatHighlight.Text = "Boat [" .. math.floor(distance) .. "]"
-                    boatHighlight.Position = Vector2.new(screenPos.X, screenPos.Y)
-                end
-            end
-        end
-    end
-end)
+    local esps = Tabs.misc:createGroup('right', 'esps')
 
-local esps = Tabs.misc:createGroup('right', 'esps')
+    esps:addToggle({text = "Body Bag",default = false,flag = "BodyBag",callback = function(state)
+        settings.corpseESP.enabled = state
+    end})  
 
-esps:addToggle({text = "Body Bag", default = false, flag = "BodyBag", callback = function(state)
-    settings.corpseESP.enabled = state
-end})
-
-esps:addToggle({text = "Atv Esp", default = false, flag = "ShowATV", callback = function(state)
-    settings.atvESP.enabled = state
-end})
-
-esps:addToggle({text = "Boat ESP", default = false, flag = "ShowBoat", callback = function(state)
-    settings.boatESP.enabled = state
-end})
-
+    esps:addToggle({text = "Atv Esp",default = false,flag = "ShowATV",callback = function(state)
+        settings.atvESP.enabled = state
+    end})
 
     Aura:addToggle({text = "Kill Aura",default = false,flag = "AuraGoodToUse",callback = function(state)
         settings.killAura.enabled = state
@@ -1543,7 +1507,7 @@ end})
     Farm:addSlider({text = "distance", min = 1, max = 10, suffix = "%", float = 1, default = 1, flag = "silent_farm.distance",callback = function(Value)
         settings.silentFarm.distance = Value
     end})
-    local VehicleFly = Tabs.misc:createGroup('left', 'Vehicle Fly | ATV & Boat')
+    local AtvFly = Tabs.misc:createGroup('left', 'Atv Fly | Skibidi')
 
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -1555,14 +1519,13 @@ local speed = 115
 local isSpeedToggled = false
 local previousSpeed = speed
 local collisionToggle = false
-local ClosestVehicle = nil
+local ClosestATV = nil
 local Enabled = false
-local vehicleBypass = true
+local atvbypass = true
 
 local DesyncRotationSpeed = 5
 local flipToggle = true
 
--- Utility function for clamping values
 local function clampSpeed(value, min, max)
     return math.max(min, math.min(max, value))
 end
@@ -1581,48 +1544,53 @@ local function toggleSpeed()
     isSpeedToggled = not isSpeedToggled
 end
 
--- Get the closest vehicle (ATV or Boat)
-local function GetClosestVehicle()
-    local closestVehicle, closestDistance = nil, math.huge
+local function GetClosestATV()
+    local closestATV, closestDistance = nil, math.huge
 
     for _, v in ipairs(Workspace:GetChildren()) do
-        if (v:FindFirstChild("Seat") and v:FindFirstChild("Plastics")) or (v:FindFirstChild("Hull")) then
-            local mainPart = v:FindFirstChild("Plastics") or v:FindFirstChild("Hull")
-            if mainPart then
-                local distance = (mainPart.Position - Workspace.Ignore.LocalCharacter.Middle.Position).Magnitude
-                if distance < closestDistance then
-                    closestVehicle = v
-                    closestDistance = distance
-                end
+        if v:FindFirstChild("Seat") and v:FindFirstChild("Plastics") then
+            local distance = (v.Plastics.Position - Workspace.Ignore.LocalCharacter.Middle.Position).Magnitude
+            if distance < closestDistance then
+                closestATV = v
+                closestDistance = distance
             end
         end
     end
 
-    return closestVehicle
+    return closestATV
 end
 
-local function toggleCollision()
-    if not ClosestVehicle then return end
+local function toggleATVCollision()
+    if not ClosestATV then return end
 
     collisionToggle = not collisionToggle
-    for _, part in ipairs(ClosestVehicle:GetDescendants()) do
+    for _, part in ipairs(ClosestATV:GetDescendants()) do
         if part:IsA("BasePart") then
             part.CanCollide = collisionToggle
         end
     end
 end
 
-local function noclipAllParts()
-    if not ClosestVehicle then return end
+local function toggleFlip()
+    if ClosestATV then
+        local frame = ClosestATV:FindFirstChild("Frame")
+        if frame then
+            local flip = frame:FindFirstChild("Flip")
+            local flip2 = frame:FindFirstChild("Flip2")
 
-    for _, part in ipairs(ClosestVehicle:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
+            if flip then flip.Enabled = flipToggle end
+            if flip2 then flip2.Enabled = flipToggle end
+        end
+    end
 
-            for _, force in ipairs(part:GetChildren()) do
-                if force:IsA("BodyMover") or force:IsA("VectorForce") or force:IsA("AlignPosition") or force:IsA("AlignOrientation") then
-                    force:Destroy()
-                end
+    flipToggle = not flipToggle
+end
+
+local function removeForces()
+    if ClosestATV then
+        for _, force in ipairs(ClosestATV:GetDescendants()) do
+            if force:IsA("BodyGyro") or force:IsA("BodyPosition") or force:IsA("VectorForce") then
+                force:Destroy()
             end
         end
     end
@@ -1630,44 +1598,71 @@ end
 
 local function FlyHack()
     RunService.RenderStepped:Connect(function()
-        ClosestVehicle = GetClosestVehicle()
-        if Enabled and ClosestVehicle then
-            local mainPart = ClosestVehicle:FindFirstChild("Plastics") or ClosestVehicle:FindFirstChild("Hull")
-            if mainPart then
-                mainPart.Velocity = Vector3.zero
+        ClosestATV = GetClosestATV()
+        if Enabled and ClosestATV then
+            local plastics = ClosestATV.Plastics
+            plastics.Velocity = Vector3.zero
 
-                local travel = Vector3.zero
-                local cameraCFrame = Workspace.CurrentCamera.CFrame
+            local flip2 = ClosestATV.Frame:FindFirstChild("Flip2")
+            if not flip2 then
+                local newFlip = ClosestATV.Frame.Flip:Clone()
+                newFlip.Name = "Flip2"
+                newFlip.Enabled = true
+                newFlip.Parent = ClosestATV.Frame
+            else
+                flip2.Enabled = true
+            end
 
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                    travel += cameraCFrame.LookVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                    travel -= cameraCFrame.LookVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                    travel += cameraCFrame.RightVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                    travel -= cameraCFrame.RightVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.X) then
-                    travel += cameraCFrame.UpVector
-                end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-                    travel -= cameraCFrame.UpVector
-                end
+            local travel = Vector3.zero
+            local cameraCFrame = Workspace.CurrentCamera.CFrame
 
-                if travel.Magnitude > 0 then
-                    mainPart.Anchored = false
-                    mainPart.Velocity = travel.Unit * speed
-                else
-                    mainPart.Velocity = Vector3.zero
-                    mainPart.Anchored = false
-                end
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                travel += cameraCFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                travel -= cameraCFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                travel += cameraCFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                travel -= cameraCFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.X) then
+                travel += cameraCFrame.UpVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                travel -= cameraCFrame.UpVector
+            end
+
+            if travel.Magnitude > 0 then
+                plastics.Anchored = false
+                plastics.Velocity = travel.Unit * speed
+            else
+                plastics.Velocity = Vector3.zero
+                plastics.Anchored = false
+            end
+
+            removeForces()
+        else
+            local flip2 = ClosestATV and ClosestATV.Frame:FindFirstChild("Flip2")
+            if flip2 then
+                flip2.Enabled = false
             end
         end
     end)
+end
+
+local function noclipAllParts()
+    if ClosestATV then
+        for _, part in ipairs(ClosestATV:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+                part.Anchored = false
+                part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0)
+            end
+        end
+    end
 end
 
 UserInputService.InputBegan:Connect(function(input)
@@ -1680,15 +1675,38 @@ UserInputService.InputBegan:Connect(function(input)
     elseif input.KeyCode == Enum.KeyCode.Z then
         Enabled = not Enabled
     elseif input.KeyCode == Enum.KeyCode.F then
-        toggleCollision()
-        noclipAllParts()
+        toggleATVCollision()
+    elseif input.KeyCode == Enum.KeyCode.T then
+        if ClosestATV then
+            ClosestATV:SetPrimaryPartCFrame(ClosestATV.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(-DesyncRotationSpeed), 0))
+        end
+    elseif input.KeyCode == Enum.KeyCode.G then
+        if ClosestATV then
+            ClosestATV:SetPrimaryPartCFrame(ClosestATV.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(DesyncRotationSpeed), 0))
+        end
+    elseif input.KeyCode == Enum.KeyCode.H then
+        toggleFlip()
     end
 end)
 
 FlyHack()
 
-VehicleFly:addSlider({
-    text = "Vehicle Speed",
+RunService.RenderStepped:Connect(function()
+    for _, v in ipairs(Workspace:GetChildren()) do
+        local frame = v:FindFirstChild("Frame")
+        if frame then
+            local flip = frame:FindFirstChild("Flip")
+            if flip and atvbypass then
+                flip.Enabled = true
+                flip.RigidityEnabled = true
+                flip.Responsiveness = math.huge
+            end
+        end
+    end
+end)
+
+AtvFly:addSlider({
+    text = "Atv Speed",
     min = 1,
     max = 300,
     suffix = "%",
@@ -1700,7 +1718,7 @@ VehicleFly:addSlider({
     end
 })
 
-VehicleFly:addSlider({
+AtvFly:addSlider({
     text = "Desync Rotation Speed",
     min = 1,
     max = 50,
@@ -1763,11 +1781,11 @@ VehicleFly:addSlider({
     end})
     gameTab:addButton({text = "Copy Join Code",callback = function(state)
     setclipboard(("game:GetService('TeleportService'):TeleportToPlaceInstance(%s, '%s')"):format(game.PlaceId, game.JobId))
-    Library:Notify("Phililpines On Top - succesfully copied join code!", 5)
+    Library:Notify("surge.gg - succesfully copied join code!", 5)
     end})
     gameTab:addButton({text = "rejoin",callback = function(Value)
     game:GetService('TeleportService'):TeleportToPlaceInstance(game.PlaceId, game.JobId)
-    library:Notify("Philippines On Top - succesfully rejoining server!", 5)
+    library:Notify("surge.gg - succesfully rejoining server!", 5)
     end})
     end
 
