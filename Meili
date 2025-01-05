@@ -1,102 +1,97 @@
--- Global flags for settings
-getgenv().SilentAimEnabled = true
-getgenv().ManipulationEnabled = true
-getgenv().SnaplineEnabled = true
-getgenv().FOVCircleEnabled = true
-getgenv().FOVRadius = 30
-getgenv().ManipulationAngles = 1
-getgenv().ManipulationRadius = 6
+local workspace = game.Workspace
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
--- Services and Variables
-local Camera = workspace.CurrentCamera
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+-- Global toggle
+getgenv().IsEnabled = true -- Default to enabled
+getgenv().SilentEnabled = true -- Silent aim
+getgenv().PlayersVelocity = nil
 
--- FOV Circle
+Config = {
+    Manipulation = {
+        Enabled = true, -- Default enabled
+        Angles = 1, -- Default to 1
+        Radius = 6, -- Default to 6
+        Direction = "Normal",
+        Vector = Vector3.new(0, 0, 0)
+    }
+}
+
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-FOVCircle.Radius = getgenv().FOVRadius
+FOVCircle.Visible = true -- Default enabled
 FOVCircle.Color = Color3.fromRGB(45, 116, 202)
 FOVCircle.Thickness = 1.5
-FOVCircle.Visible = getgenv().FOVCircleEnabled
+FOVCircle.Radius = 30 -- Default size
 
--- Snapline
 local Line = Drawing.new("Line")
+Line.Visible = true -- Default enabled
 Line.Color = Color3.fromRGB(255, 255, 255)
 Line.Thickness = 1.5
-Line.Visible = getgenv().SnaplineEnabled
 
--- Function to find the closest target
+-- Toggle function
+local function toggleEnabled()
+    getgenv().IsEnabled = not getgenv().IsEnabled
+    getgenv().SilentEnabled = getgenv().IsEnabled
+    FOVCircle.Visible = getgenv().IsEnabled
+    Line.Visible = getgenv().IsEnabled
+    print("Silent Aim: " .. (getgenv().IsEnabled and "Enabled" or "Disabled"))
+end
+
+-- Detect key press
+UserInputService.InputBegan:Connect(function(input, isProcessed)
+    if isProcessed then return end
+    if input.KeyCode == Enum.KeyCode.J then
+        toggleEnabled()
+    end
+end)
+
 local function GetPlayer()
-    local closest = nil
+    local closest, playerTable = nil, nil
     local closestMagnitude = math.huge
-    local playerTable = nil
 
-    for _, v in pairs(Players:GetPlayers()) do
-        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
-            local partPosition, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
-            local partVector2 = Vector2.new(partPosition.X, partPosition.Y)
-            local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    for _, v in pairs(workspace:GetChildren()) do
+        if v:FindFirstChild("Head") and v:IsA("Model") then
+            local PartPos, OnScreen = workspace.CurrentCamera:WorldToViewportPoint(v:GetPivot().Position)
+            local Magnitude = (Vector2.new(PartPos.X, PartPos.Y) - Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)).Magnitude
+            local PlayerDistance = (workspace.Ignore.LocalCharacter.Middle:GetPivot().Position - v:GetPivot().Position).Magnitude
 
-            local Magnitude = (partVector2 - screenCenter).Magnitude
-            local PlayerDistance = (workspace.Ignore.LocalCharacter.Middle:GetPivot().Position - v.Character:GetPivot().Position).Magnitude
-
-            if Magnitude < FOVCircle.Radius and PlayerDistance <= 9999 and Magnitude < closestMagnitude and onScreen then
+            if Magnitude < FOVCircle.Radius and PlayerDistance <= 9999 and Magnitude < closestMagnitude and OnScreen then
                 closestMagnitude = Magnitude
                 closest = v
                 playerTable = v
             end
         end
     end
-
     return closest, playerTable
 end
 
--- Function to handle aiming
-local function AimAtTarget(target)
-    if target and target.Character and target.Character:FindFirstChild("Head") then
-        local headPosition = target.Character.Head.Position
-        local predictedPosition = headPosition -- Can add prediction logic here if needed
-        if predictedPosition then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, predictedPosition)
+local function updateSnapline()
+    if not getgenv().IsEnabled then
+        Line.Visible = false
+        return
+    end
+
+    local Target, playerData = GetPlayer()
+    if Target and Target:FindFirstChild("Head") then
+        local headPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(Target.Head.Position)
+        Line.Visible = onScreen
+
+        if onScreen then
+            Line.To = Vector2.new(headPos.X, headPos.Y)
+            getgenv().PlayersVelocity = Vector3.new(0, 0, 0)
+        else
+            getgenv().PlayersVelocity = nil
         end
+    else
+        Line.Visible = false
+        getgenv().PlayersVelocity = nil
     end
 end
 
--- Main loop
-game:GetService("RunService").RenderStepped:Connect(function()
-    if getgenv().SilentAimEnabled then
-        local target, playerTable = GetPlayer()
-
-        if target then
-            if getgenv().ManipulationEnabled then
-                -- Adjust aim with manipulation settings
-                local manipulationFactor = getgenv().ManipulationAngles
-                local adjustedTargetPosition = target.Character.Head.Position + Vector3.new(
-                    math.random(-manipulationFactor, manipulationFactor),
-                    math.random(-manipulationFactor, manipulationFactor),
-                    math.random(-manipulationFactor, manipulationFactor)
-                )
-                AimAtTarget({Character = {Head = {Position = adjustedTargetPosition}}})
-            else
-                AimAtTarget(target)
-            end
-
-            -- Draw snapline
-            if getgenv().SnaplineEnabled and target.Character:FindFirstChild("Head") then
-                local headScreenPos = Camera:WorldToViewportPoint(target.Character.Head.Position)
-                Line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                Line.To = Vector2.new(headScreenPos.X, headScreenPos.Y)
-                Line.Visible = true
-            else
-                Line.Visible = false
-            end
-        else
-            Line.Visible = false
-        end
+RunService.RenderStepped:Connect(function()
+    if getgenv().IsEnabled then
+        updateSnapline()
     end
-
-    -- Update FOV Circle
-    FOVCircle.Radius = getgenv().FOVRadius
-    FOVCircle.Visible = getgenv().FOVCircleEnabled
 end)
+
+print("Silent Aim loaded. Press 'J' to toggle.")
