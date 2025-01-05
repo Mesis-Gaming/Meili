@@ -1,135 +1,193 @@
--- Services and Variables
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local GuiService = game:GetService("GuiService")
-local Camera = workspace.CurrentCamera
-
--- Configuration
+local workspace = game.Workspace
+local playerListCache = {}
+local lastUpdated = 0
+local snaplineTarget = nil
 getgenv().SilentEnabled = true
-getgenv().ManipulationEnabled = true
-local FOVSettings = {
-    Enabled = true,
-    Radius = 30,
-    Angle = 1,
-    Snapline = true,
-    Manipulation = true
+
+Config = {
+    Manipulation = {
+        Enabled = true,
+        Angles = 1, -- Default angle set to 1
+        Radius = 6, -- Default radius set to 6
+        Direction = "Normal",
+        Vector = Vector3.new(0, 0, 0)
+    },
+} 
+
+local modules = {
+    ["PlayerClient"] = {},
+    ["Character"] = {},
+    ["BowClient"] = {},
+    ["Camera"] = {},
+    ["RangedWeaponClient"] = {},
+    ["GetEquippedItem"] = {},
+    ["FPS"] = {},
 }
 
--- Visual Elements
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 1.5
-FOVCircle.NumSides = 30
-FOVCircle.Radius = FOVSettings.Radius
-FOVCircle.Color = Color3.new(1, 1, 1)
-FOVCircle.Filled = false
-FOVCircle.Visible = FOVSettings.Enabled
+for _, v in pairs(getgc(true)) do
+    if typeof(v) == "function" and islclosure(v) then
+        local info = debug.getinfo(v)
+        local name = string.match(info.short_src, "%.([%w_]+)$")
 
-local Snapline = Drawing.new("Line")
-Snapline.Thickness = 1
-Snapline.Color = Color3.new(1, 0, 0)
-Snapline.Visible = FOVSettings.Snapline
-
--- Prediction Function
-local function GetProjectileInfo()
-    local projectileSpeed = 1000
-    local projectileDrop = 0.5
-    return projectileSpeed, projectileDrop
+        if name and modules[name] and info.name ~= nil then
+            modules[name][info.name] = info.func
+        end
+    end
 end
 
-local function Predict(Player, Velocity)
-    local PSpeed, PDrop = GetProjectileInfo()
-    if PSpeed and PDrop then
-        local Dist = (Player.Position - Camera.CFrame.Position).Magnitude
-        local TimeToHit = Dist / PSpeed
-        local PPos1 = Player.Position + (Velocity * TimeToHit * 3.4)
-        local Drop = -PDrop ^ (TimeToHit * PDrop) + 1.1
-        local PPos = PPos1 - Vector3.new(0, Drop, 0)
-        return PPos, TimeToHit
+local playerListCache = {}
+local snaplineTarget = nil
+
+local PlayerList = debug.getupvalue(modules.PlayerClient.updatePlayers, 1)
+
+if not PlayerList then
+    error("PlayerList function not found.")
+end
+
+local function GetPlayer()
+    local closest, playerTable = nil, nil
+    local closestMagnitude = math.huge
+    for _, v in pairs(debug.getupvalue(modules.PlayerClient.updatePlayers, 1) or {}) do
+        if v.type == "Player" and v.model:FindFirstChild("Head") and not v.sleeping then
+            local PartPos, OnScreen = Camera:WorldToViewportPoint(v.model:GetPivot().Position)
+            local Magnitude = (Vector2.new(PartPos.X, PartPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+            local PlayerDistance = (workspace.Ignore.LocalCharacter.Middle:GetPivot().Position - v.model:GetPivot().Position).Magnitude
+
+            if Magnitude < FOVCircle.Radius and PlayerDistance <= 9999 and Magnitude < closestMagnitude and OnScreen then
+                closestMagnitude = Magnitude
+                closest = v.model
+                playerTable = v
+            end
+        end
     end
+    return closest, playerTable
+end
+
+local function updateTarget()
+    local target = snaplineTarget
+    if target then
+        getgenv().Target = target
+    end
+end
+
+getgenv().PlayersVelocity = nil
+local function updateSnapline()
+    local Target, playerData = GetPlayer()
+    if Target and Target:FindFirstChild("Head") then
+        local headPos, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(Target.Head.Position)
+        Line.Visible = onScreen
+
+        if onScreen then
+            Line.To = Vector2.new(headPos.X, headPos.Y)
+            snaplineTarget = Target
+            getgenv().PlayersVelocity = playerData.velocityVector
+        else
+            snaplineTarget = nil
+            getgenv().PlayersVelocity = nil
+        end
+    else
+        Line.Visible = false
+        snaplineTarget = nil
+        getgenv().PlayersVelocity = nil
+    end
+end
+
+local CharacterList = debug.getupvalues(modules.Character.getGroundCastResult)
+
+local function GetProjectileInfo()
+    local equippedItem = CharacterList[2].GetEquippedItem()
+    
+    if equippedItem == nil then
+        return 0, 0
+    else
+        local projectileSpeed = equippedItem.ProjectileSpeed
+        local projectileDrop = equippedItem.ProjectileDrop
+        if projectileSpeed == nil or projectileDrop == nil then
+            return 0, 0
+        else
+            return projectileSpeed, projectileDrop
+        end
+    end
+end
+
+local Cam = workspace.CurrentCamera
+
+getgenv().Predict = function(Player, Velocity)
+    local PSpeed, PDrop = GetProjectileInfo()
+
+    if PSpeed and PDrop then
+        while true do
+            if Player.Position then
+                local Dist = (Player.Position - Cam.CFrame.Position).Magnitude
+                
+                if Dist > 0 then
+                    local TimeToHit = Dist / PSpeed 
+                    
+                    local PPos1 = Player.Position + (Velocity * TimeToHit * 3.4)
+                    
+                    local Drop = -PDrop ^ (TimeToHit * PDrop) + 1.1
+                    local PPos = PPos1 - Vector3.new(0, Drop, 0)
+                    
+                    return PPos, TimeToHit
+                end
+            end
+            
+            wait()
+        end
+    end
+    
     return Vector3.new(0, 0, 0), nil
 end
 
--- Get Closest Player
-local function GetPlayer()
-    local closest, closestMagnitude = nil, math.huge
-    for _, v in pairs(game.Players:GetPlayers()) do
-        if v ~= game.Players.LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
-            local PartPos, OnScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
-            local Magnitude = (Vector2.new(PartPos.X, PartPos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-            if Magnitude < FOVSettings.Radius and Magnitude < closestMagnitude and OnScreen then
-                closestMagnitude = Magnitude
-                closest = v.Character
-            end
-        end
-    end
-    return closest
-end
-
--- Manipulation and Target Adjustment
-local function calculateBestOffset(Target)
-    if not Target then return "Normal", Vector3.new() end
-    local bestDirection, bestOffset = "Normal", Vector3.new()
-    for angle = 0, 360, 15 do
-        local radianAngle = math.rad(angle)
-        for xOffset = 1, 3 do
-            for yOffset = -4, 4 do
-                local offset = Vector3.new(math.cos(radianAngle) * xOffset, yOffset, 0)
-                if Camera:WorldToViewportPoint(Target.Head.Position + offset) then
-                    return angle, offset
-                end
-            end
-        end
-    end
-    return bestDirection, bestOffset
-end
-
--- Update Visuals
-RunService.RenderStepped:Connect(function()
-    if FOVSettings.Enabled then
-        FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-        FOVCircle.Visible = true
-    else
-        FOVCircle.Visible = false
-    end
-
-    if FOVSettings.Snapline then
-        local Target = GetPlayer()
-        if Target and Target:FindFirstChild("Head") then
-            local HeadPos = Camera:WorldToViewportPoint(Target.Head.Position)
-            Snapline.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-            Snapline.To = Vector2.new(HeadPos.X, HeadPos.Y)
-            Snapline.Visible = true
-        else
-            Snapline.Visible = false
-        end
-    else
-        Snapline.Visible = false
-    end
-end)
-
--- Silent Aim Hook
 local OldHook
-OldHook = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    local args = { ... }
+local StackLVL = nil
 
-    if getgenv().SilentEnabled and tostring(method) == "Raycast" then
-        local Target = GetPlayer()
-        if Target and Target:FindFirstChild("Head") then
-            local PredictedPos, _ = Predict(Target.Head, Vector3.new(0, 0, 0))
-            args[2] = PredictedPos - Camera.CFrame.Position
+OldHook = hookmetamethod(Random.new(), "__namecall", newcclosure(function(self, ...)
+    if StackLVL == nil then
+        local Executor = identifyexecutor()
+
+        if Executor == "Nihon" then
+            StackLVL = 5
+        elseif Executor == "Delta" then
+            StackLVL = 4
+        elseif Executor == "Wave" then
+            StackLVL = 3
+        elseif Executor == "Arceus X" then
+            StackLVL = 3
+        elseif Executor == "Codex" then
+            StackLVL = 3
+        else
+            StackLVL = 3
         end
     end
 
-    return OldHook(self, unpack(args))
-end)
+    local stack = debug.getstack(StackLVL, 4)
 
--- Toggle Functionality
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.B then
-        getgenv().SilentEnabled = not getgenv().SilentEnabled
-        FOVSettings.Enabled = not FOVSettings.Enabled
-        FOVSettings.Snapline = not FOVSettings.Snapline
-        print("Silent Aim Toggled:", getgenv().SilentEnabled)
+    if stack and getgenv().SilentEnabled and getgenv().Target and getgenv().PlayersVelocity and Config.Manipulation.Enabled then
+        local targetHead = getgenv().Target.Head
+        local predictedPos = getgenv().Predict(targetHead, getgenv().PlayersVelocity)
+
+        if predictedPos then
+            local targetPos = CFrame.lookAt(workspace.CurrentCamera.CFrame.p, predictedPos) * CFrame.new(Config.Manipulation.Vector)
+            setstack(StackLVL, 4, targetPos)
+        end
     end
+
+    return OldHook(self, ...)
+end))
+
+-- FOV Circle Configuration
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 1.5
+FOVCircle.NumSides = 30
+FOVCircle.Radius = 30 -- Default FOV size set to 30
+FOVCircle.Color = Color3.fromRGB(45, 116, 202)
+FOVCircle.Filled = false
+FOVCircle.Visible = true
+
+-- Update Snapline and Target on RenderStepped
+local RunService = game:GetService("RunService")
+RunService.RenderStepped:Connect(function()
+    updateSnapline()
+    updateTarget()
 end)
