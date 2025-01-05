@@ -1524,7 +1524,7 @@ local Enabled = false
 local atvbypass = true
 
 local DesyncRotationSpeed = 5
-local flipToggle = true
+local flipToggle = true  -- Keeps track of Flip/Flip2 toggle state
 
 local function clampSpeed(value, min, max)
     return math.max(min, math.min(max, value))
@@ -1560,13 +1560,24 @@ local function GetClosestATV()
     return closestATV
 end
 
+local function disableConstraints(model)
+    for _, constraint in ipairs(model:GetDescendants()) do
+        if constraint:IsA("Constraint") or constraint:IsA("Weld") or constraint:IsA("Motor6D") then
+            constraint.Enabled = false
+        end
+    end
+end
+
 local function toggleATVCollision()
     if not ClosestATV then return end
 
     collisionToggle = not collisionToggle
+    disableConstraints(ClosestATV) -- Disable constraints during noclip
+
     for _, part in ipairs(ClosestATV:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.CanCollide = collisionToggle
+            part.CanCollide = not collisionToggle
+            part.Anchored = false -- Ensure parts are unanchored
         end
     end
 end
@@ -1580,43 +1591,13 @@ local function toggleFlip()
 
             if flip then flip.Enabled = flipToggle end
             if flip2 then flip2.Enabled = flipToggle end
+
+            -- Notify the user
+            print("Flip/Flip2 is now " .. (flipToggle and "enabled" or "disabled"))
         end
     end
 
     flipToggle = not flipToggle
-end
-
-local function removeForces()
-    if ClosestATV then
-        for _, force in ipairs(ClosestATV:GetDescendants()) do
-            if force:IsA("BodyGyro") or force:IsA("BodyPosition") or force:IsA("VectorForce") then
-                print("Removing force:", force.Name, "Class:", force.ClassName)
-                force:Destroy()
-            end
-        end
-    end
-end
-
-local function noclipAllParts()
-    if ClosestATV then
-        for _, part in ipairs(ClosestATV:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Anchored = false
-                part.CanCollide = false
-                part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0) -- Remove physical influence
-                if part:IsA("MeshPart") then
-                    part.CollisionFidelity = Enum.CollisionFidelity.Box -- Simplify collision
-                end
-            end
-        end
-
-        -- Remove unwanted constraints
-        for _, constraint in ipairs(ClosestATV:GetDescendants()) do
-            if constraint:IsA("Weld") or constraint:IsA("Motor6D") then
-                constraint:Destroy()
-            end
-        end
-    end
 end
 
 local function FlyHack()
@@ -1665,8 +1646,6 @@ local function FlyHack()
                 plastics.Velocity = Vector3.zero
                 plastics.Anchored = false
             end
-
-            removeForces()
         else
             local flip2 = ClosestATV and ClosestATV.Frame:FindFirstChild("Flip2")
             if flip2 then
@@ -1695,7 +1674,7 @@ UserInputService.InputBegan:Connect(function(input)
         if ClosestATV then
             ClosestATV:SetPrimaryPartCFrame(ClosestATV.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(DesyncRotationSpeed), 0))
         end
-    elseif input.KeyCode == Enum.KeyCode.H then
+    elseif input.KeyCode == Enum.KeyCode.H then  -- Toggle Flip/Flip2
         toggleFlip()
     end
 end)
@@ -1741,7 +1720,6 @@ AtvFly:addSlider({
         DesyncRotationSpeed = Value
     end
 })
-
 
 
 
