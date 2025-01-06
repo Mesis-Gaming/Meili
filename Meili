@@ -88,14 +88,14 @@ local Line = Drawing.new("Line")
 Line.Color = Color3.fromRGB(255, 255, 255)
 Line.From = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Workspace.CurrentCamera.ViewportSize.Y / 2)
 Line.Thickness = 1
-Line.Visible = true
+Line.Visible = false
 Line.ZIndex = 1
 
     local workspace = game.Workspace
     local playerListCache = {}
     local lastUpdated = 0
     local snaplineTarget = nil
-    getgenv().SilentEnabled = false
+    getgenv().SilentEnabled = true
 
     Config = {
         Manipulation = {
@@ -372,7 +372,18 @@ Line.ZIndex = 1
         end
     end)
 
-    --RunService.Heartbeat:Connect(updateManipulationBar)
+local isActive = false
+
+-- Key toggling logic
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.X then
+        isActive = not isActive
+    end
+end)
+
+
+--RunService.Heartbeat:Connect(updateManipulationBar)
 
     local function onRenderStepped()
         updateSnapline()
@@ -380,3 +391,5 @@ Line.ZIndex = 1
     end
 
     RunService.RenderStepped:Connect(onRenderStepped)
+
+    
