@@ -105,13 +105,13 @@ local FOVCircle = Drawing.new("Circle")
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 FOVCircle.Radius = 35
 FOVCircle.Color = Color3.fromRGB(45, 116, 202)
-FOVCircle.Visible = false
+FOVCircle.Visible = true
 
 local Line = Drawing.new("Line")
 Line.Color = Color3.fromRGB(255, 255, 255)
 Line.From = Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X / 2, game.Workspace.CurrentCamera.ViewportSize.Y / 2)
 Line.Thickness = 1
-Line.Visible = true
+Line.Visible = false
 Line.ZIndex = 1
 
 local Decode = base64.decode
@@ -183,7 +183,7 @@ local function updateSnapline()
             getgenv().PlayersVelocity = nil
         end
     else
-        Line.Visible = false
+        Line.Visible = true
         snaplineTarget = nil
         getgenv().PlayersVelocity = nil
     end
