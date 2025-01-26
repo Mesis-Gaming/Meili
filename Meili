@@ -110,11 +110,11 @@ local workspace = game.Workspace
 local playerListCache = {}
 local lastUpdated = 0
 local snaplineTarget = nil
-getgenv().SilentEnabled = false
+getgenv().SilentEnabled = true
 
 Config = {
     Manipulation = {
-        Enabled = false,
+        Enabled = true,
         Angles = 5,
         Radius = 6,
         Direction = "Normal",
